@@ -21,8 +21,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .page-shell {
   min-height: 100svh;
@@ -61,6 +73,37 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .soft-orb--one { background: #ff5ca7; left: -25%; top: -30%; }
 .soft-orb--two { background: #a76de7; right: -27%; bottom: -35%; }
+
+.language-picker {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.82);
+  border-radius: 15px;
+  color: #9f315f;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 10px 28px rgba(119,35,74,.15), inset 0 1px rgba(255,255,255,.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.language-picker > span { font-size: 16px; line-height: 1; }
+
+.language-picker select {
+  max-width: 88px;
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+  color: #8d2d58;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
 
 .experience {
   width: min(100%, 510px);
@@ -322,6 +365,29 @@ button { -webkit-tap-highlight-color: transparent; }
 .text-field input::placeholder, .text-field textarea::placeholder { color: #c99ab0; font-weight: 500; }
 .text-field input:focus, .text-field textarea:focus { border-color: #e04480; box-shadow: 0 0 0 4px rgba(224,68,128,.1); }
 
+.phone-field {
+  display: grid;
+  grid-template-columns: minmax(142px, .9fr) minmax(0, 1.1fr);
+  gap: 8px;
+}
+
+.phone-field select {
+  min-width: 0;
+  width: 100%;
+  height: 47px;
+  padding: 0 8px;
+  border: 1.5px solid #f0c9db;
+  border-radius: 14px;
+  outline: 0;
+  color: #772248;
+  background: rgba(255,255,255,.86);
+  font-size: 11px;
+  font-weight: 700;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.phone-field select:focus { border-color: #e04480; box-shadow: 0 0 0 4px rgba(224,68,128,.1); }
+
 .form-error { margin: 12px 0 0; color: #bc255f; text-align: center; font-size: 12px; font-weight: 750; }
 .privacy-note { margin: 11px 0 -4px; color: #c187a1; text-align: center; font-size: 10px; }
 
@@ -369,10 +435,12 @@ button { -webkit-tap-highlight-color: transparent; }
   .intro-actions { gap: 10px; }
   .yes-button { min-width: 154px; padding-inline: 24px; }
   .no-button { padding-inline: 19px; }
+  .phone-field { grid-template-columns: 128px minmax(0, 1fr); }
+  .language-picker { right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); }
 }
 
 @media (max-height: 720px) and (orientation: portrait) {
-  .page-shell { padding-block: 12px; overflow-y: auto; }
+  .page-shell { padding: 12px 13px 78px; overflow-y: auto; }
   .progress { height: 30px; margin-bottom: 5px; }
   .form-card { padding-block: 22px; }
   .step-icon { width: 48px; height: 48px; font-size: 28px; }

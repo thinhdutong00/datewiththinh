@@ -8,7 +8,10 @@ type DateRequest = {
   activity?: unknown;
   food?: unknown;
   name?: unknown;
+  phonePrefix?: unknown;
+  phone?: unknown;
   note?: unknown;
+  language?: unknown;
   website?: unknown;
 };
 
@@ -40,17 +43,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  const language = clean(body.language, 2) === "it" ? "it" : "en";
+  const messages = language === "it"
+    ? {
+        incomplete: "Completa tutti i passaggi prima di inviare.",
+        phone: "Inserisci un numero di telefono valido.",
+        unavailable: "L’email non è ancora configurata. Avvisa Thinh 💌",
+        delivery: "Non è stato possibile inviare l’email. Riprova ancora una volta.",
+      }
+    : {
+        incomplete: "Please complete every step first.",
+        phone: "Please enter a valid phone number.",
+        unavailable: "Email is not configured yet. Please tell Thinh 💌",
+        delivery: "The email could not be sent. Please try once more.",
+      };
+
   const submission = {
     date: clean(body.date),
     time: clean(body.time),
     activity: clean(body.activity),
     food: clean(body.food),
     name: clean(body.name, 80),
+    phonePrefix: clean(body.phonePrefix, 8).replace(/[^\d+]/g, ""),
+    phone: clean(body.phone, 32).replace(/[^\d\s().-]/g, ""),
     note: clean(body.note, 600),
+    language,
   };
 
   if (!submission.date || !submission.time || !submission.activity || !submission.food || !submission.name) {
-    return NextResponse.json({ error: "Please complete every step first." }, { status: 400 });
+    return NextResponse.json({ error: messages.incomplete }, { status: 400 });
+  }
+
+  const phoneDigits = submission.phone.replace(/\D/g, "");
+  if (
+    submission.phone
+    && (!/^\+\d{1,4}$/.test(submission.phonePrefix) || phoneDigits.length < 5 || phoneDigits.length > 18)
+  ) {
+    return NextResponse.json({ error: messages.phone }, { status: 400 });
   }
 
   const apiKey = process.env.RESEND_API_KEY;
@@ -59,19 +88,22 @@ export async function POST(request: NextRequest) {
 
   if (!apiKey) {
     console.error("RESEND_API_KEY is not configured");
-    return NextResponse.json({ error: "Email is not configured yet. Please tell Thinh 💌" }, { status: 503 });
+    return NextResponse.json({ error: messages.unavailable }, { status: 503 });
   }
 
   const safe = Object.fromEntries(
     Object.entries(submission).map(([key, value]) => [key, escapeHtml(value)]),
   ) as typeof submission;
 
-  const rows = [
+  const rows: Array<[string, string]> = [
     ["📅 When", safe.date],
     ["🕐 Time", safe.time],
     ["✨ Plan", safe.activity],
     ["🍽️ Food", safe.food],
   ];
+
+  if (safe.phone) rows.push(["📞 Phone", `${safe.phonePrefix} ${safe.phone}`]);
+  rows.push(["🌐 Language", submission.language === "it" ? "Italiano" : "English"]);
 
   const html = `
     <div style="margin:0;background:#fff4fa;padding:40px 16px;font-family:Arial,sans-serif;color:#6e274a">
@@ -95,6 +127,8 @@ export async function POST(request: NextRequest) {
     `Time: ${submission.time}`,
     `Plan: ${submission.activity}`,
     `Food: ${submission.food}`,
+    submission.phone ? `Phone: ${submission.phonePrefix} ${submission.phone}` : "",
+    `Language: ${submission.language === "it" ? "Italiano" : "English"}`,
     submission.note ? `\nNote: ${submission.note}` : "",
   ].filter(Boolean).join("\n");
 
@@ -119,12 +153,12 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const detail = await response.text();
       console.error("Resend error", response.status, detail);
-      return NextResponse.json({ error: "The email could not be sent. Please try once more." }, { status: 502 });
+      return NextResponse.json({ error: messages.delivery }, { status: 502 });
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Email delivery error", error);
-    return NextResponse.json({ error: "The email could not be sent. Please try once more." }, { status: 502 });
+    return NextResponse.json({ error: messages.delivery }, { status: 502 });
   }
 }
