@@ -15,6 +15,103 @@ type DateRequest = {
   website?: unknown;
 };
 
+const languageNames = {
+  en: "English",
+  es: "Español",
+  it: "Italiano",
+  de: "Deutsch",
+  pt: "Português",
+  fr: "Français",
+  zh: "中文",
+  hi: "हिन्दी",
+  ar: "العربية",
+  ja: "日本語",
+  ko: "한국어",
+  ru: "Русский",
+} as const;
+
+type Language = keyof typeof languageNames;
+
+const localizedMessages: Record<Language, {
+  incomplete: string;
+  phone: string;
+  unavailable: string;
+  delivery: string;
+}> = {
+  en: {
+    incomplete: "Please complete every step first.",
+    phone: "Please enter a valid phone number.",
+    unavailable: "Email is not configured yet. Please tell Thinh 💌",
+    delivery: "The email could not be sent. Please try once more.",
+  },
+  es: {
+    incomplete: "Completa todos los pasos antes de enviar.",
+    phone: "Introduce un número de teléfono válido.",
+    unavailable: "El correo todavía no está configurado. Avisa a Thinh 💌",
+    delivery: "No se pudo enviar el correo. Inténtalo una vez más.",
+  },
+  it: {
+    incomplete: "Completa tutti i passaggi prima di inviare.",
+    phone: "Inserisci un numero di telefono valido.",
+    unavailable: "L’email non è ancora configurata. Avvisa Thinh 💌",
+    delivery: "Non è stato possibile inviare l’email. Riprova ancora una volta.",
+  },
+  de: {
+    incomplete: "Bitte fülle zuerst alle Schritte aus.",
+    phone: "Gib bitte eine gültige Telefonnummer ein.",
+    unavailable: "E-Mail ist noch nicht eingerichtet. Sag bitte Thinh Bescheid 💌",
+    delivery: "Die E-Mail konnte nicht gesendet werden. Versuche es bitte noch einmal.",
+  },
+  pt: {
+    incomplete: "Complete todas as etapas antes de enviar.",
+    phone: "Digite um número de telefone válido.",
+    unavailable: "O e-mail ainda não está configurado. Avise o Thinh 💌",
+    delivery: "Não foi possível enviar o e-mail. Tente mais uma vez.",
+  },
+  fr: {
+    incomplete: "Complète toutes les étapes avant l’envoi.",
+    phone: "Saisis un numéro de téléphone valide.",
+    unavailable: "L’e-mail n’est pas encore configuré. Préviens Thinh 💌",
+    delivery: "L’e-mail n’a pas pu être envoyé. Réessaie encore une fois.",
+  },
+  zh: {
+    incomplete: "请先完成所有步骤。",
+    phone: "请输入有效的电话号码。",
+    unavailable: "邮件尚未配置，请告诉 Thinh 💌",
+    delivery: "邮件发送失败，请再试一次。",
+  },
+  hi: {
+    incomplete: "भेजने से पहले सभी चरण पूरे करें।",
+    phone: "कृपया एक मान्य फ़ोन नंबर डालें।",
+    unavailable: "ईमेल अभी सेट नहीं है। कृपया Thinh को बताएँ 💌",
+    delivery: "ईमेल नहीं भेजा जा सका। कृपया एक बार फिर कोशिश करें।",
+  },
+  ar: {
+    incomplete: "أكمل جميع الخطوات قبل الإرسال.",
+    phone: "أدخل رقم هاتف صالحًا.",
+    unavailable: "البريد الإلكتروني غير مُعد بعد. أخبر Thinh من فضلك 💌",
+    delivery: "تعذر إرسال البريد الإلكتروني. حاول مرة أخرى.",
+  },
+  ja: {
+    incomplete: "送信する前にすべてのステップを完了してください。",
+    phone: "有効な電話番号を入力してください。",
+    unavailable: "メールはまだ設定されていません。Thinh に知らせてください 💌",
+    delivery: "メールを送信できませんでした。もう一度お試しください。",
+  },
+  ko: {
+    incomplete: "전송하기 전에 모든 단계를 완료해 주세요.",
+    phone: "올바른 전화번호를 입력해 주세요.",
+    unavailable: "이메일이 아직 설정되지 않았어요. Thinh에게 알려 주세요 💌",
+    delivery: "이메일을 보내지 못했어요. 한 번 더 시도해 주세요.",
+  },
+  ru: {
+    incomplete: "Заполни все шаги перед отправкой.",
+    phone: "Введи действительный номер телефона.",
+    unavailable: "Почта ещё не настроена. Сообщи Thinh 💌",
+    delivery: "Не удалось отправить письмо. Попробуй ещё раз.",
+  },
+};
+
 const clean = (value: unknown, max = 160) =>
   typeof value === "string" ? value.trim().slice(0, max) : "";
 
@@ -43,20 +140,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const language = clean(body.language, 2) === "it" ? "it" : "en";
-  const messages = language === "it"
-    ? {
-        incomplete: "Completa tutti i passaggi prima di inviare.",
-        phone: "Inserisci un numero di telefono valido.",
-        unavailable: "L’email non è ancora configurata. Avvisa Thinh 💌",
-        delivery: "Non è stato possibile inviare l’email. Riprova ancora una volta.",
-      }
-    : {
-        incomplete: "Please complete every step first.",
-        phone: "Please enter a valid phone number.",
-        unavailable: "Email is not configured yet. Please tell Thinh 💌",
-        delivery: "The email could not be sent. Please try once more.",
-      };
+  const requestedLanguage = clean(body.language, 2) as Language;
+  const language = Object.hasOwn(languageNames, requestedLanguage) ? requestedLanguage : "en";
+  const messages = localizedMessages[language];
 
   const submission = {
     date: clean(body.date),
@@ -76,8 +162,10 @@ export async function POST(request: NextRequest) {
 
   const phoneDigits = submission.phone.replace(/\D/g, "");
   if (
-    submission.phone
-    && (!/^\+\d{1,4}$/.test(submission.phonePrefix) || phoneDigits.length < 5 || phoneDigits.length > 18)
+    !submission.phone
+    || !/^\+\d{1,4}$/.test(submission.phonePrefix)
+    || phoneDigits.length < 5
+    || phoneDigits.length > 18
   ) {
     return NextResponse.json({ error: messages.phone }, { status: 400 });
   }
@@ -102,8 +190,8 @@ export async function POST(request: NextRequest) {
     ["🍽️ Food", safe.food],
   ];
 
-  if (safe.phone) rows.push(["📞 Phone", `${safe.phonePrefix} ${safe.phone}`]);
-  rows.push(["🌐 Language", submission.language === "it" ? "Italiano" : "English"]);
+  rows.push(["📞 Phone", `${safe.phonePrefix} ${safe.phone}`]);
+  rows.push(["🌐 Language", languageNames[submission.language]]);
 
   const html = `
     <div style="margin:0;background:#fff4fa;padding:40px 16px;font-family:Arial,sans-serif;color:#6e274a">
@@ -127,8 +215,8 @@ export async function POST(request: NextRequest) {
     `Time: ${submission.time}`,
     `Plan: ${submission.activity}`,
     `Food: ${submission.food}`,
-    submission.phone ? `Phone: ${submission.phonePrefix} ${submission.phone}` : "",
-    `Language: ${submission.language === "it" ? "Italiano" : "English"}`,
+    `Phone: ${submission.phonePrefix} ${submission.phone}`,
+    `Language: ${languageNames[submission.language]}`,
     submission.note ? `\nNote: ${submission.note}` : "",
   ].filter(Boolean).join("\n");
 
